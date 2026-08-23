@@ -18,5 +18,8 @@ def create_app():
         jti = jwt_payload["jti"]
         return TokenBlocklist.query.filter_by(jti=jti).first() is not None
     
+    from app.routes.auth import auth_bp
+    app.register_blueprint(auth_bp)
+    
     return app
 
