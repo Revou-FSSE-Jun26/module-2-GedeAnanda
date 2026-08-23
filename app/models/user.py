@@ -1,4 +1,3 @@
-from datetime import datetime
 from app.extensions import db
 
 
@@ -9,9 +8,17 @@ class User(db.Model):
     username = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable = False )
-    role = db.Column(db.String(20), nullable=False ,default='customer')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    role = db.Column(db.String(20), nullable=False, server_default='customer')
+    created_at = db.Column(
+        db.DateTime(timezone=True), 
+        server_default=db.func.now()
+    )
+
+    updated_at = db.Column(
+        db.DateTime(timezone=True), 
+        server_default=db.func.now(), 
+        onupdate=db.func.now()
+    )
     
     orders = db.relationship('Order', backref='user', lazy=True)
     

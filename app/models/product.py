@@ -1,4 +1,3 @@
-from datetime import datetime
 from app.extensions import db
 
 class Category(db.Model):
@@ -7,8 +6,8 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+    updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now())
     
     products = db.relationship('Product', backref='category', lazy=True)
     
@@ -36,11 +35,19 @@ class Product(db.Model):
     )
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Numeric(12, 2), nullable=False)
-    stock = db.Column(db.Integer, nullable=False, default=0)
+    stock = db.Column(db.Integer, nullable=False, server_default=db.text('0'))
     description = db.Column(db.Text)
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = db.Column(db.Boolean, server_default=db.text('true'))
+    created_at = db.Column(
+        db.DateTime(timezone=True), 
+        server_default=db.func.now()
+    )
+
+    updated_at = db.Column(
+        db.DateTime(timezone=True), 
+        server_default=db.func.now(), 
+        onupdate=db.func.now()
+    )
 
     def to_dict(self):
         return {

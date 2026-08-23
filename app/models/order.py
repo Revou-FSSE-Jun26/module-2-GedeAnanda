@@ -1,4 +1,3 @@
-from datetime import datetime
 from app.extensions import db
 
 
@@ -14,10 +13,18 @@ class Order(db.Model):
         db.ForeignKey('users.id', ondelete='RESTRICT', onupdate='CASCADE'),
         nullable=False
     )
-    status = db.Column(db.String(50), nullable=False, default='pending')
-    total_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = db.Column(db.String(50), nullable=False, server_default='pending')
+    total_amount = db.Column(db.Numeric(12, 2), nullable=False, server_default=db.text('0'))
+    created_at = db.Column(
+        db.DateTime(timezone=True), 
+        server_default=db.func.now()
+    )
+
+    updated_at = db.Column(
+        db.DateTime(timezone=True), 
+        server_default=db.func.now(), 
+        onupdate=db.func.now()
+    )
 
     items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')
 
@@ -54,7 +61,7 @@ class OrderItem(db.Model):
         db.ForeignKey('products.id', ondelete='RESTRICT', onupdate='CASCADE'),
         nullable=False
     )
-    quantity = db.Column(db.Integer, nullable=False, default=1)
+    quantity = db.Column(db.Integer, nullable=False, server_default=db.text('1'))
     price = db.Column(db.Numeric(12, 2), nullable=False)
 
     product = db.relationship('Product', backref='order_items', lazy=True)
