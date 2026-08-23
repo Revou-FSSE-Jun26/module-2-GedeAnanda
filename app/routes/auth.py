@@ -23,7 +23,7 @@ def register():
     
     if len(data['password']) < 8 :
         return jsonify({
-            "error" : "passwor must be at least 8 characters"
+            "error" : "password must be at least 8 characters"
         }), 409
     
     if User.query.filter_by(email=data['email']).first():
@@ -57,7 +57,7 @@ def login():
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({"error": "email and password are required"}), 400
     
-    user = User.query.filter_by(email=data['email'].first())
+    user = User.query.filter_by(email=data['email']).first()
     
     if not user or not check_password_hash(user.password_hash, data['password'] ):
         return jsonify({
@@ -110,6 +110,6 @@ def me():
         return jsonify({
             "error" : "User not found"
         }), 404
-    return jsonify({
+    return jsonify(
         user.to_dict()
-    }),200
+    ),200
