@@ -19,7 +19,12 @@ def create_app():
         return TokenBlocklist.query.filter_by(jti=jti).first() is not None
     
     from app.routes.auth import auth_bp
+    from app.routes.categories import categories_bp
     app.register_blueprint(auth_bp)
+    app.register_blueprint(categories_bp)
+    
+    from app.utils.errors import register_error_handlers
+    register_error_handlers(app)
     
     return app
 
