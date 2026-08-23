@@ -15,27 +15,36 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
-    if not data or not data.get('username') or not data.get('email') or not data.get('password'):
+    if not data:
+        return jsonify({
+            "error": "Request body is required"
+        }), 400
+
+    username = str(data.get('username', '')).strip()
+    email = str(data.get('email', '')).strip().lower()
+    password = data.get('password')
+
+    if not username or not email or not password:
         return jsonify({
             "error": "Username, email, and password are required"
         }), 400
 
-    if len(data['password']) < 8:
+    if not isinstance(password, str) or len(password) < 8:
         return jsonify({
             "error": "Password must be at least 8 characters"
         }), 400
 
-    if User.query.filter_by(email=data['email']).first():
+    if User.query.filter_by(email=email).first():
         return jsonify({
             "error": "Email is already registered"
         }), 409
 
     new_user = User(
-        username=data['username'],
-        email=data['email'],
-        password_hash=generate_password_hash(data['password'])
+        username=username,
+        email=email,
+        password_hash=generate_password_hash(password)
     )
 
     db.session.add(new_user)
@@ -56,16 +65,24 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True)
 
-    if not data or not data.get('email') or not data.get('password'):
+    if not data:
+        return jsonify({
+            "error": "Request body is required"
+        }), 400
+
+    email = str(data.get('email', '')).strip().lower()
+    password = data.get('password')
+
+    if not email or not password:
         return jsonify({
             "error": "Email and password are required"
         }), 400
 
-    user = User.query.filter_by(email=data['email']).first()
+    user = User.query.filter_by(email=email).first()
 
-    if not user or not check_password_hash(user.password_hash, data['password']):
+    if not user or not check_password_hash(user.password_hash, password):
         return jsonify({
             "error": "Invalid email or password"
         }), 401
