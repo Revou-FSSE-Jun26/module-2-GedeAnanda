@@ -47,7 +47,7 @@ def get_category(category_id):
     if category is None:
         return jsonify({
             "error" : "Category not found"
-        })
+        }), 404
     
     result = category.to_dict()
     result['products'] = [p.to_dict() for p in category.products]
