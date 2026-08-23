@@ -18,6 +18,9 @@ def create_category():
     if not name:
         return jsonify({"error": "Name is required"}), 400
 
+    if Category.query.filter(db.func.lower(Category.name) == name.lower()).first():
+        return jsonify({"error": "Category name already exists"}), 409
+    
     new_category = Category(
         name=name,
         description=data.get('description')
@@ -68,16 +71,22 @@ def update_category(category_id):
         }),404
         
     data = request.get_json(silent=True)
+    
     if not data:
         return jsonify({
             "error" : "Request body is required"
         }),400
     
     name = str(data.get('name', '')).strip()
+    
     if not name:
         return jsonify({
             "error" : "Name is required"
         }), 400
+        
+    existing = Category.query.filter(db.func.lower(Category.name) == name.lower(), Category.id != category_id).first()
+    if existing:
+        return jsonify({"error": "Category name already exists"}), 409
     
     category.name = name
     category.description = data.get('description', category.description)
