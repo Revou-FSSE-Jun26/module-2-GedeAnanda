@@ -30,12 +30,15 @@ def create_product():
             "error" : "category_id does not reference an existing category"
         }), 400
     
+    if isinstance(data['price'], bool):
+        return jsonify({"error": "Price must be a number"}), 400
     try:
         price = float(data['price'])
     except (TypeError, ValueError):
         return jsonify({"error" :"Price must be a number"}),400
-    if price < 0 :
+    if price < 0:
         return jsonify({"error": "Price must be >= 0"}), 400
+
 
     stock = data.get('stock', 0)
     if not isinstance(stock, int) or isinstance(stock,bool) or stock < 0 :
@@ -77,7 +80,7 @@ def get_products():
     if is_active is not None:
         query = query.filter_by(is_active = is_active.lower() == 'true')
     if search :
-        query = query.filter(Product.name.ilike(f"%{search}"))
+        query = query.filter(Product.name.ilike(f"%{search}%"))
         
     pagination = query.order_by(Product.id).paginate(
         page=page, per_page=per_page, error_out=False
@@ -132,6 +135,10 @@ def update_product(product_id):
         return jsonify({"error": "Name cannot be empty"}), 400
     
     if 'price' in data :
+        if isinstance(data['price'], bool):
+            return jsonify({
+                "error" : "price must be a number"
+            }), 400
         try:
             price = float(data['price'])
         except(TypeError, ValueError):
