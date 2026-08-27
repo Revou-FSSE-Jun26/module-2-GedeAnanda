@@ -27,7 +27,6 @@ def create_order():
     if not isinstance(items, list) or not items:
         return jsonify({"error": "items must be a non-empty list"}), 400
 
-    # Validasi bentuk tiap item + gabungkan product_id yang dobel
     requested = {}
     for item in items:
         if not isinstance(item, dict):
@@ -43,7 +42,6 @@ def create_order():
 
         requested[product_id] = requested.get(product_id, 0) + quantity
 
-    # Ambil semua produk sekaligus, dan kunci barisnya sampai transaksi selesai
     products = Product.query.filter(
         Product.id.in_(requested.keys())
     ).with_for_update().all()
@@ -56,7 +54,7 @@ def create_order():
             "error": f"Product not found: {', '.join(str(p) for p in missing)}"
         }), 404
 
-    # Validasi ketersediaan sebelum mengubah apa pun
+
     for product_id, quantity in requested.items():
         product = product_map[product_id]
         if not product.is_active:
@@ -70,7 +68,7 @@ def create_order():
 
     order = Order(user_id=_current_user_id(), status='pending', total_amount=0)
     db.session.add(order)
-    db.session.flush()  # dapatkan order.id tanpa commit
+    db.session.flush() 
 
     total = 0
     for product_id, quantity in requested.items():
