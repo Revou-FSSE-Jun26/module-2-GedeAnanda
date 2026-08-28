@@ -25,7 +25,7 @@ def create_product():
         return jsonify({
             "error": "Name cannot be empty"
         }), 400
-    if Category.query.get(data['category_id']) is None:
+    if db.session.get(Category, data['category_id']) is None:
         return jsonify({
             "error" : "category_id does not reference an existing category"
         }), 400
@@ -99,7 +99,7 @@ def get_products():
 
 @products_bp.route('/<int:product_id>', methods=['GET'])
 def get_product(product_id):
-    product = Product.query.get(product_id)
+    product = db.session.get(Product, product_id)
     
     if product is None:
         return jsonify({
@@ -115,7 +115,7 @@ def get_product(product_id):
 @products_bp.route('/<int:product_id>', methods=['PUT'])
 @role_required('admin')
 def update_product(product_id):
-    product = Product.query.get(product_id)
+    product = db.session.get(Product, product_id)
     
     if product is None:
         return jsonify({
@@ -127,7 +127,7 @@ def update_product(product_id):
         return jsonify({
             "error" :"Request body is required"
         }), 400 
-    if 'category_id' in data and Category.query.get(data['category_id']) is None:
+    if 'category_id' in data and db.session.get(Category, data['category_id']) is None:
         return jsonify({
             "error" :"category_id does not reference an existing category"
         }), 400
@@ -178,7 +178,7 @@ def update_product(product_id):
 @products_bp.route('/<int:product_id>', methods=['DELETE'])
 @role_required('admin')
 def delete_product(product_id):
-    product = Product.query.get(product_id)
+    product = db.session.get(Product, product_id)
     if product is None:
         return jsonify({
             "error" :"Product not found"

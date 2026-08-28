@@ -132,7 +132,7 @@ def get_orders():
 @orders_bp.route('/<int:order_id>', methods=['GET'])
 @jwt_required()
 def get_order(order_id):
-    order = Order.query.get(order_id)
+    order = db.session.get(Order, order_id)
     if order is None:
         return jsonify({"error": "Order not found"}), 404
 
@@ -148,7 +148,7 @@ def get_order(order_id):
 @orders_bp.route('/<int:order_id>/status', methods=['PUT'])
 @jwt_required()
 def update_order_status(order_id):
-    order = Order.query.get(order_id)
+    order = db.session.get(Order, order_id)
     if order is None:
         return jsonify({"error": "Order not found"}), 404
 
@@ -177,7 +177,7 @@ def update_order_status(order_id):
 @orders_bp.route('/<int:order_id>/cancel', methods=['POST'])
 @jwt_required()
 def cancel_order(order_id):
-    order = Order.query.get(order_id)
+    order = db.session.get(Order, order_id)
     if order is None:
         return jsonify({"error": "Order not found"}), 404
 

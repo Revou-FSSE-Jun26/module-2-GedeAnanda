@@ -46,7 +46,7 @@ def get_categories():
 
 @categories_bp.route('/<int:category_id>', methods=['GET'])
 def get_category(category_id):
-    category =  Category.query.get(category_id)
+    category =  db.session.get(Category, category_id)
     if category is None:
         return jsonify({
             "error" : "Category not found"
@@ -64,7 +64,7 @@ def get_category(category_id):
 @categories_bp.route('/<int:category_id>', methods=['PUT'])
 @role_required('admin')
 def update_category(category_id):
-    category = Category.query.get(category_id)
+    category = db.session.get(Category, category_id)
     if category is None:
         return jsonify({
             "error" : "Category not found"
@@ -101,7 +101,7 @@ def update_category(category_id):
 @categories_bp.route('/<int:category_id>', methods=['DELETE'])
 @role_required('admin')
 def delete_category(category_id):
-    category = Category.query.get(category_id)
+    category = db.session.get(Category, category_id)
     if category is None:
         return jsonify({
             "error" : "Category not found"

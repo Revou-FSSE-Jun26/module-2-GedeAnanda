@@ -104,7 +104,7 @@ def login():
 @jwt_required(refresh=True)
 def refresh():
     identity = get_jwt_identity()
-    user = User.query.get(int(identity))
+    user = db.session.get(User, int(identity))
 
     if not user:
         return jsonify({
@@ -137,7 +137,7 @@ def logout():
 @jwt_required()
 def me():
     identity = get_jwt_identity()
-    user = User.query.get(int(identity))
+    user = db.session.get(User, int(identity))
 
     if not user:
         return jsonify({
