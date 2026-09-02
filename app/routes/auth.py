@@ -57,8 +57,6 @@ def register():
         "message": "User registered successfully",
         "data": {
             "user": new_user.to_dict(),
-            "access_token": access_token,
-            "refresh_token": refresh_token
         }
     }), 201
 
