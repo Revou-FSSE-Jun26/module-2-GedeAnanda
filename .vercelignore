@@ -1,0 +1,9 @@
+venv/
+tests/
+img/
+migrations/
+locustfile.py
+requirements-dev.txt
+Procfile
+README.md
+.pytest_cache/

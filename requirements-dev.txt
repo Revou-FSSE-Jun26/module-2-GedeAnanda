@@ -1,0 +1,7 @@
+-r requirements.txt
+
+# Testing
+pytest==9.1.1
+
+# Load testing
+locust==2.46.4
