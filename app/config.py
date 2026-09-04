@@ -22,8 +22,13 @@ def _engine_options(db_url):
 
     A pool is useless when the process dies after the response, and holding
     connections open exhausts the Postgres connection limit, so we use NullPool
-    and let Supabase's pooler do the pooling. TLS is required for any remote
-    host but skipped locally, where the dev server has no certificate.
+    and let Supabase's transaction pooler (port 6543) do the pooling. That
+    pooler also rejects server-side prepared statements, which psycopg2 does
+    not emit on its own -- nothing to disable, but do not swap in a driver that
+    does (psycopg3, asyncpg) without turning them off first.
+
+    TLS is required for any remote host but skipped locally, where the dev
+    server has no certificate.
     """
     options = {"poolclass": NullPool}
     host = urlsplit(db_url).hostname or ""
