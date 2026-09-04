@@ -24,11 +24,13 @@ def create_app(config_class=Config):
     from app.routes.categories import categories_bp
     from app.routes.products import products_bp
     from app.routes.orders import orders_bp
+    from app.routes.users import users_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(categories_bp)
     app.register_blueprint(products_bp)
     app.register_blueprint(orders_bp)
+    app.register_blueprint(users_bp)
         
     @app.get('/')
     def index():
