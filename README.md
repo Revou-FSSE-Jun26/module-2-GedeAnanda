@@ -1,115 +1,132 @@
 # RevoShop API
 
-REST API untuk platform e-commerce RevoShop, dibangun dengan Flask, SQLAlchemy, dan PostgreSQL. API ini mengelola users, categories, products, orders, dan order items melalui interface RESTful dengan autentikasi berbasis JWT dan kontrol akses berbasis role.
+REST API for the RevoShop e-commerce platform, built with Flask, SQLAlchemy, and PostgreSQL. It manages users, categories, products, orders, and order items through a RESTful interface with JWT authentication and role-based access control.
 
-**Dokumentasi endpoint lengkap:** [Postman Documentation](https://documenter.getpostman.com/view/49407169/2sBYAuSAwp)
+**Live API:** [https://module-2-gede-ananda.vercel.app/](https://module-2-gede-ananda.vercel.app/)
+
+**Full endpoint documentation:** [Postman Documentation](https://documenter.getpostman.com/view/49407169/2sBYAuSAwp)
 
 ---
 
-## Daftar Isi
+## Table of Contents
 
 - [Overview](#overview)
-- [Fitur](#fitur)
-- [Teknologi](#teknologi)
-- [Struktur Database](#struktur-database)
-- [Struktur Project](#struktur-project)
-- [Menjalankan Project Secara Lokal](#menjalankan-project-secara-lokal)
-- [Daftar Endpoint](#daftar-endpoint)
-- [Autentikasi & Otorisasi](#autentikasi--otorisasi)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Database Design](#database-design)
+- [Project Structure](#project-structure)
+- [Running the Project Locally](#running-the-project-locally)
+- [Deployment](#deployment)
+- [Endpoints](#endpoints)
+- [Authentication & Authorization](#authentication--authorization)
 - [Testing](#testing)
 - [Load Testing](#load-testing)
-- [Catatan Desain](#catatan-desain)
+- [Design Notes](#design-notes)
 - [Screenshots](#screenshots)
 
 ---
 
 ## Overview
 
-RevoShop adalah backend API untuk toko online yang mengelola katalog produk berkategori, akun pengguna, dan pemesanan. Setiap order dapat berisi beberapa produk sekaligus, dan setiap produk dapat muncul di banyak order berbeda — relasi many-to-many yang dijembatani tabel `order_items`, yang juga menyimpan quantity dan harga pada saat transaksi terjadi.
+RevoShop is a backend API for an online store that manages a categorized product catalog, user accounts, and orders. An order can contain several products at once, and a product can appear in many different orders — a many-to-many relationship bridged by the `order_items` table, which also stores the quantity and the price at the moment the transaction happened.
 
-API ini dirancang sebagai sistem toko tunggal: admin mengelola katalog (kategori dan produk), sementara customer melihat katalog dan membuat pesanan.
+The API is designed as a single-store system: admins manage the catalog (categories and products), while customers browse the catalog and place orders.
+
+The deployed instance is available at [https://module-2-gede-ananda.vercel.app/](https://module-2-gede-ananda.vercel.app/) — that base URL is the prefix for every endpoint listed below. For example:
+
+```bash
+curl https://module-2-gede-ananda.vercel.app/products
+curl https://module-2-gede-ananda.vercel.app/health
+```
 
 ---
 
-## Fitur
+## Features
 
-**Autentikasi & Otorisasi**
-- Registrasi dan login dengan password ter-hash
-- JWT dengan access token (30 menit) dan refresh token (30 hari)
-- Logout dengan token revocation melalui blocklist
+**Authentication & Authorization**
+- Registration and login with hashed passwords
+- JWT with access tokens (30 minutes) and refresh tokens (30 days)
+- Logout with token revocation through a blocklist
 - Role-based access control (admin / customer)
 
-**Manajemen Katalog**
-- CRUD penuh untuk categories dan products
-- Pagination, filtering (berdasarkan kategori dan status aktif), dan pencarian nama produk
-- Deletion guard: produk yang sudah pernah dipesan tidak dapat dihapus
-- Deletion guard: kategori yang masih memiliki produk tidak dapat dihapus
+**User Management**
+- Admin-only user listing with pagination, role filter, and search by username or email
+- Profile updates: a user can update their own account, an admin can update any account
+- Role changes are restricted to admins, so no customer can promote themselves
+- Password hashes are never included in any response
 
-**Manajemen Order**
-- Pembuatan order dengan beberapa produk sekaligus
-- Perhitungan `total_amount` otomatis
-- Pengurangan stock otomatis saat order dibuat
-- Validasi ketersediaan stock dan status aktif produk sebelum order diproses
-- Penggabungan otomatis item duplikat dalam satu order
-- Row-level locking untuk mencegah race condition saat stock diperebutkan
-- Pembatalan order dengan pengembalian stock
-- Customer hanya dapat melihat ordernya sendiri; admin dapat melihat semua
+**Catalog Management**
+- Full CRUD for categories and products
+- Pagination, filtering (by category and active status), and product name search
+- Deletion guard: a product that has already been ordered cannot be deleted
+- Deletion guard: a category that still holds products cannot be deleted
 
-**Kualitas & Keamanan**
-- Validasi input di seluruh endpoint dengan pesan error yang spesifik
-- Global error handler: semua error dikembalikan sebagai JSON dengan status code yang tepat
-- Rollback otomatis pada kegagalan transaksi database
-- Konfigurasi sensitif dipisahkan ke `.env`
+**Order Management**
+- Order creation with multiple products at once
+- Automatic `total_amount` calculation
+- Automatic stock deduction when an order is created
+- Stock availability and product active status validated before an order is processed
+- Duplicate items within one order are merged automatically
+- Row-level locking to prevent race conditions when stock is contended
+- Order cancellation with stock restored
+- Customers only see their own orders; admins see all of them
+
+**Quality & Security**
+- Input validation across every endpoint with specific error messages
+- Global error handler: all errors are returned as JSON with the correct status code
+- Automatic rollback on database transaction failure
+- Sensitive configuration kept in `.env`
 
 ---
 
-## Teknologi
+## Tech Stack
 
-| Kategori | Teknologi |
+| Category | Technology |
 |---|---|
 | Framework | Flask |
 | ORM | SQLAlchemy (Flask-SQLAlchemy) |
-| Migrasi | Flask-Migrate (Alembic) |
-| Database | PostgreSQL |
-| Autentikasi | Flask-JWT-Extended |
-| Konfigurasi | python-dotenv |
+| Migrations | Flask-Migrate (Alembic) |
+| Database | PostgreSQL (Supabase in production) |
+| Authentication | Flask-JWT-Extended |
+| Configuration | python-dotenv |
 | Testing | pytest |
 | Load Testing | Locust |
+| Hosting | Vercel |
 | Database GUI | pgAdmin |
 
 ---
 
-## Struktur Database
+## Database Design
 
-Lima tabel inti dengan relasi berikut:
+Five core tables with the following relationships:
 
-- **users** → **orders** (one-to-many): satu user dapat memiliki banyak order
-- **categories** → **products** (one-to-many): satu kategori memiliki banyak produk
-- **orders** ↔ **products** (many-to-many via **order_items**): satu order berisi banyak produk, satu produk muncul di banyak order
+- **users** → **orders** (one-to-many): one user can have many orders
+- **categories** → **products** (one-to-many): one category holds many products
+- **orders** ↔ **products** (many-to-many via **order_items**): one order contains many products, one product appears in many orders
 
-Tabel tambahan **token_blocklist** menyimpan JWT ID (`jti`) dari token yang sudah di-revoke saat logout.
+An additional **token_blocklist** table stores the JWT ID (`jti`) of tokens revoked at logout.
 
-### Aturan Referential Integrity
+### Referential Integrity Rules
 
-| Relasi | ON DELETE | Alasan |
+| Relationship | ON DELETE | Reason |
 |---|---|---|
-| `order_items` → `orders` | CASCADE | Item tidak bermakna tanpa ordernya |
-| `order_items` → `products` | RESTRICT | Menjaga riwayat transaksi tetap utuh |
-| `products` → `categories` | RESTRICT | Mencegah produk kehilangan kategori |
-| `orders` → `users` | RESTRICT | Menjaga riwayat order tetap terhubung ke pemiliknya |
+| `order_items` → `orders` | CASCADE | An item is meaningless without its order |
+| `order_items` → `products` | RESTRICT | Keeps transaction history intact |
+| `products` → `categories` | RESTRICT | Prevents a product from losing its category |
+| `orders` → `users` | RESTRICT | Keeps order history tied to its owner |
 
-Harga produk disalin ke `order_items.price` saat order dibuat, bukan direferensikan. Ini memastikan perubahan harga di masa depan tidak mengubah nilai transaksi yang sudah terjadi.
+Product prices are copied into `order_items.price` when an order is created rather than referenced. This guarantees that future price changes do not rewrite the value of transactions that already happened.
 
 ---
 
-## Struktur Project
+## Project Structure
 
 ```
 revoshop-api/
 ├── app/
 │   ├── __init__.py          # application factory
-│   ├── config.py            # konfigurasi (Config, TestConfig)
-│   ├── extensions.py        # instance db, migrate, jwt
+│   ├── config.py            # configuration (Config, TestConfig)
+│   ├── extensions.py        # db, migrate, jwt, cors instances
 │   ├── models/
 │   │   ├── user.py          # User
 │   │   ├── product.py       # Category, Product
@@ -117,6 +134,7 @@ revoshop-api/
 │   │   └── token.py         # TokenBlocklist
 │   ├── routes/
 │   │   ├── auth.py          # register, login, refresh, logout, me
+│   │   ├── users.py         # list users, update user
 │   │   ├── categories.py    # CRUD categories
 │   │   ├── products.py      # CRUD products
 │   │   └── orders.py        # order, cancel, status
@@ -133,27 +151,29 @@ revoshop-api/
 ├── .env.example
 ├── .gitignore
 ├── locustfile.py
-├── requirements.txt
-└── run.py
+├── requirements.txt         # runtime dependencies (installed by Vercel)
+├── requirements-dev.txt     # test and load-test tooling
+├── run.py                   # local development entrypoint
+└── wsgi.py                  # WSGI entrypoint used in production
 ```
 
 ---
 
-## Menjalankan Project Secara Lokal
+## Running the Project Locally
 
-### Prasyarat
+### Prerequisites
 
 - Python 3.10+
 - PostgreSQL
 
-### 1. Clone repository
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Revou-FSSE-Jun26/module-2-GedeAnanda.git
 cd module-2-GedeAnanda
 ```
 
-### 2. Buat dan aktifkan virtual environment
+### 2. Create and activate a virtual environment
 
 ```bash
 python3 -m venv venv
@@ -164,20 +184,21 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-dev.txt   # needed to run the tests
 ```
 
-### 4. Buat database
+### 4. Create the databases
 
-Melalui pgAdmin atau psql, buat dua database:
+Through pgAdmin or psql, create two databases:
 
 ```sql
 CREATE DATABASE revoshop_db;
 CREATE DATABASE revoshop_test;
 ```
 
-### 5. Konfigurasi environment
+### 5. Configure the environment
 
-Salin `.env.example` menjadi `.env`, lalu isi nilainya:
+Copy `.env.example` to `.env`, then fill in the values:
 
 ```bash
 cp .env.example .env
@@ -186,96 +207,144 @@ cp .env.example .env
 ```
 DATABASE_URL=postgresql://postgres:password@localhost:5432/revoshop_db
 TEST_DATABASE_URL=postgresql://postgres:password@localhost:5432/revoshop_test
-SECRET_KEY=<string acak>
-JWT_SECRET_KEY=<string acak>
+SECRET_KEY=<random string>
+JWT_SECRET_KEY=<a different random string>
+CORS_ORIGINS=*
 ```
 
-Generate secret key dengan:
+Generate a secret key with:
 
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-### 6. Jalankan migrasi
+### 6. Run the migrations
 
 ```bash
 export FLASK_APP=run.py          # Windows: set FLASK_APP=run.py
 flask db upgrade
 ```
 
-### 7. Jalankan aplikasi
+### 7. Start the application
 
 ```bash
 flask run
 ```
 
-API berjalan di `http://127.0.0.1:5000`.
+The API runs at `http://127.0.0.1:5000`.
 
-### 8. Membuat akun admin
+### 8. Creating an admin account
 
-Endpoint POST, PUT, dan DELETE untuk products dan categories memerlukan role `admin`. Registrasi publik selalu menghasilkan role `customer` — ini disengaja, agar tidak ada jalur untuk self-assign menjadi admin.
+POST, PUT, and DELETE endpoints for products and categories require the `admin` role, as does `GET /users`. Public registration always produces a `customer` — that is deliberate, so there is no path to self-assign as admin.
 
-Daftarkan user melalui API, lalu promosikan melalui database:
+Register a user through the API, then promote them in the database:
 
 ```sql
-UPDATE users SET role = 'admin' WHERE email = 'email_anda@example.com';
+UPDATE users SET role = 'admin' WHERE email = 'your_email@example.com';
 ```
 
-Login ulang setelahnya agar token yang baru membawa role admin.
+Log in again afterwards so the new token carries the admin role. Once one admin exists, further role changes can be made through `PUT /users/<id>`.
 
 ---
 
-## Daftar Endpoint
+## Deployment
 
-Dokumentasi lengkap dengan contoh request dan response tersedia di [Postman Documentation](https://documenter.getpostman.com/view/49407169/2sBYAuSAwp).
+The API is deployed on Vercel at [https://module-2-gede-ananda.vercel.app/](https://module-2-gede-ananda.vercel.app/), backed by a Supabase PostgreSQL database.
+
+- Vercel's Python runtime imports `wsgi.py` and serves the WSGI callable named `app`. The file is deliberately not called `app.py`, which would shadow the `app/` package it imports from.
+- `requirements.txt` holds runtime dependencies only; test and load-test tooling lives in `requirements-dev.txt` so it is never installed at build time.
+- Two Supabase connection strings are used for different jobs: the **transaction pooler** (port 6543) at runtime, which suits serverless, and the **session pooler** (port 5432) for running `flask db upgrade` locally, because the transaction pooler cannot run the DDL transactions Alembic needs.
+- `DATABASE_URL`, `SECRET_KEY`, `JWT_SECRET_KEY`, and `CORS_ORIGINS` are set as Vercel environment variables. Set `CORS_ORIGINS` to your frontend origin once you have one instead of leaving it as `*`.
+
+Migrations are not run automatically on deploy — apply them locally against the session pooler before shipping schema changes.
+
+---
+
+## Endpoints
+
+Full documentation with request and response examples is available in the [Postman Documentation](https://documenter.getpostman.com/view/49407169/2sBYAuSAwp). Every path below is relative to `https://module-2-gede-ananda.vercel.app/` in production, or `http://127.0.0.1:5000` locally.
+
+### Service
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/` | Public | Service name and status |
+| GET | `/health` | Public | Health check |
 
 ### Auth
 
-| Method | Endpoint | Akses | Deskripsi |
+| Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/auth/register` | Publik | Registrasi user baru |
-| POST | `/auth/login` | Publik | Login, mengembalikan access & refresh token |
-| POST | `/auth/refresh` | Refresh token | Menukar refresh token dengan access token baru |
-| POST | `/auth/logout` | Terautentikasi | Me-revoke access token saat ini |
-| GET | `/auth/me` | Terautentikasi | Data user yang sedang login |
+| POST | `/auth/register` | Public | Register a new user |
+| POST | `/auth/login` | Public | Log in, returns access & refresh tokens |
+| POST | `/auth/refresh` | Refresh token | Exchange a refresh token for a new access token |
+| POST | `/auth/logout` | Authenticated | Revoke the current access token |
+| GET | `/auth/me` | Authenticated | The currently logged-in user |
+
+### Users
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/users` | Admin | List all users with pagination, role filter, and search |
+| PUT | `/users/<id>` | Owner or admin | Update a user's username, email, password, or role |
+
+Query parameters for `GET /users`: `page`, `per_page` (capped at 100), `role`, `search` (matches username or email).
+
+`PUT /users/<id>` accepts a partial body — only the fields present are updated:
+
+```json
+{
+  "username": "new name",
+  "email": "new@example.com",
+  "password": "at-least-8-chars",
+  "role": "admin"
+}
+```
+
+Rules enforced by this endpoint:
+
+- A customer may only update their own account; an admin may update anyone.
+- `role` may only be changed by an admin, and must be `customer` or `admin`. A customer attempting it gets 403.
+- `email` must remain unique — a collision with another account returns 409.
+- `password` must be at least 8 characters and is stored hashed, matching registration.
 
 ### Categories
 
-| Method | Endpoint | Akses | Deskripsi |
+| Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/categories` | Publik | Daftar semua kategori |
-| GET | `/categories/<id>` | Publik | Detail kategori beserta produknya |
-| POST | `/categories` | Admin | Membuat kategori baru |
-| PUT | `/categories/<id>` | Admin | Memperbarui kategori |
-| DELETE | `/categories/<id>` | Admin | Menghapus kategori (ditolak jika masih ada produk) |
+| GET | `/categories` | Public | List all categories |
+| GET | `/categories/<id>` | Public | Category detail with its products |
+| POST | `/categories` | Admin | Create a category |
+| PUT | `/categories/<id>` | Admin | Update a category |
+| DELETE | `/categories/<id>` | Admin | Delete a category (rejected if products remain) |
 
 ### Products
 
-| Method | Endpoint | Akses | Deskripsi |
+| Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/products` | Publik | Daftar produk dengan pagination, filter, dan pencarian |
-| GET | `/products/<id>` | Publik | Detail satu produk |
-| POST | `/products` | Admin | Membuat produk baru |
-| PUT | `/products/<id>` | Admin | Memperbarui produk |
-| DELETE | `/products/<id>` | Admin | Menghapus produk (ditolak jika sudah pernah dipesan) |
+| GET | `/products` | Public | List products with pagination, filtering, and search |
+| GET | `/products/<id>` | Public | Single product detail |
+| POST | `/products` | Admin | Create a product |
+| PUT | `/products/<id>` | Admin | Update a product |
+| DELETE | `/products/<id>` | Admin | Delete a product (rejected if already ordered) |
 
-Query parameter untuk `GET /products`: `page`, `per_page`, `category_id`, `is_active`, `search`.
+Query parameters for `GET /products`: `page`, `per_page`, `category_id`, `is_active`, `search`.
 
 ### Orders
 
-| Method | Endpoint | Akses | Deskripsi |
+| Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/orders` | Terautentikasi | Daftar order milik user (admin melihat semua) |
-| GET | `/orders/<id>` | Terautentikasi | Detail order beserta item dan produknya |
-| POST | `/orders` | Terautentikasi | Membuat order baru |
-| PUT | `/orders/<id>/status` | Admin | Mengubah status order |
-| POST | `/orders/<id>/cancel` | Terautentikasi | Membatalkan order dan mengembalikan stock |
+| GET | `/orders` | Authenticated | The user's own orders (admins see all) |
+| GET | `/orders/<id>` | Authenticated | Order detail with its items and products |
+| POST | `/orders` | Authenticated | Create an order |
+| PUT | `/orders/<id>/status` | Admin | Change an order's status |
+| POST | `/orders/<id>/cancel` | Authenticated | Cancel an order and restore stock |
 
-Status yang valid: `pending`, `paid`, `shipped`, `completed`, `cancelled`.
+Valid statuses: `pending`, `paid`, `shipped`, `completed`, `cancelled`.
 
-### Format Response
+### Response Format
 
-Response sukses:
+Success response:
 
 ```json
 {
@@ -285,7 +354,7 @@ Response sukses:
 }
 ```
 
-Response error:
+Error response:
 
 ```json
 {
@@ -295,37 +364,37 @@ Response error:
 
 ---
 
-## Autentikasi & Otorisasi
+## Authentication & Authorization
 
-API menggunakan JWT dengan pola access token dan refresh token.
+The API uses JWT with an access token / refresh token pattern.
 
-**Access token** (30 menit) dikirim pada setiap request yang memerlukan autentikasi:
+**Access tokens** (30 minutes) are sent with every request that requires authentication:
 
 ```
 Authorization: Bearer <access_token>
 ```
 
-**Refresh token** (30 hari) hanya digunakan pada `POST /auth/refresh` untuk memperoleh access token baru tanpa login ulang.
+**Refresh tokens** (30 days) are used only on `POST /auth/refresh` to obtain a new access token without logging in again.
 
-**Token revocation.** JWT bersifat stateless — token tetap valid hingga kedaluwarsa meskipun user sudah logout. Untuk mengatasinya, `POST /auth/logout` menyimpan `jti` (JWT ID) token ke tabel `token_blocklist`. Setiap request yang terautentikasi memeriksa blocklist sebelum diproses, sehingga token yang sudah di-logout langsung ditolak.
+**Token revocation.** JWTs are stateless — a token stays valid until it expires, even after the user logs out. To handle that, `POST /auth/logout` stores the token's `jti` (JWT ID) in the `token_blocklist` table. Every authenticated request checks the blocklist before proceeding, so a logged-out token is rejected immediately.
 
-**Role.** Role user disematkan sebagai custom claim di dalam token, sehingga pemeriksaan otorisasi tidak memerlukan query database pada setiap request. Konsekuensinya, perubahan role baru berlaku setelah token lama kedaluwarsa atau user login ulang.
+**Roles.** A user's role is embedded as a custom claim inside the token, so authorization checks do not need a database query on every request. The trade-off: a role change only takes effect once the old token expires or the user logs in again — including a role change made through `PUT /users/<id>`.
 
 ---
 
 ## Testing
 
-Test suite mencakup autentikasi, categories, products, dan orders, dengan kasus happy path maupun error case untuk setiap endpoint.
+The test suite covers authentication, categories, products, and orders, with both happy paths and error cases for each endpoint.
 
 ```bash
 pytest -v
 ```
 
-Test berjalan terhadap database terpisah (`TEST_DATABASE_URL`). Setiap test dimulai dari database kosong — tabel dibuat sebelum test dan dihapus setelahnya — sehingga test tidak saling mempengaruhi dan dapat dijalankan dalam urutan apa pun.
+Tests run against a separate database (`TEST_DATABASE_URL`). Each test starts from an empty database — tables are created before and dropped after — so tests do not affect each other and can run in any order.
 
-PostgreSQL digunakan untuk testing, bukan SQLite, agar perilaku yang diuji sama persis dengan production — khususnya row-level locking, foreign key constraint, pencarian case-insensitive, dan tipe numerik presisi tetap.
+PostgreSQL is used for testing rather than SQLite so the behavior under test matches production exactly — in particular row-level locking, foreign key constraints, case-insensitive search, and fixed-precision numeric types.
 
-Menjalankan file tertentu:
+Running a single file:
 
 ```bash
 pytest tests/test_orders.py -v
@@ -340,40 +409,40 @@ flask run                    # terminal 1
 locust                       # terminal 2
 ```
 
-Buka `http://localhost:8089`, isi host dengan `http://127.0.0.1:5000`.
+Open `http://localhost:8089` and set the host to `http://127.0.0.1:5000`.
 
-Skenario mensimulasikan perjalanan user: registrasi, melihat daftar produk, membuka detail produk, membuat order, lalu melihat order yang baru dibuat.
+The scenario simulates a user journey: register, browse the product list, open a product detail, place an order, then view the order just created.
 
-Hasil pengujian pada 200 concurrent user: 386 RPS, 0% failure, median response time 2–5 ms, 95th percentile di bawah 20 ms.
+Results at 200 concurrent users: 386 RPS, 0% failures, median response time 2–5 ms, 95th percentile under 20 ms.
 
-Pada pengujian dengan stock terbatas, sistem mengembalikan 409 Conflict untuk order yang melebihi ketersediaan tanpa satu pun stock menjadi negatif — memvalidasi bahwa row-level locking bekerja di bawah beban nyata.
+In a test with limited stock, the system returned 409 Conflict for orders exceeding availability without a single stock value going negative — confirming that row-level locking holds under real load.
 
 ---
 
-## Catatan Desain
+## Design Notes
 
-Beberapa keputusan berbeda dari spesifikasi awal, diambil secara sadar:
+Several decisions deviate from the original specification, each made deliberately:
 
-**Order dibatalkan, bukan dihapus.** Order adalah catatan transaksi yang diperlukan untuk riwayat dan audit. `POST /orders/<id>/cancel` mengubah status menjadi `cancelled` dan mengembalikan stock, alih-alih menghapus baris beserta seluruh order items-nya. Hanya order berstatus `pending` yang dapat dibatalkan — order yang sudah dibayar atau dikirim memerlukan proses refund atau retur, bukan sekadar perubahan kolom.
+**Orders are cancelled, not deleted.** An order is a transaction record needed for history and auditing. `POST /orders/<id>/cancel` sets the status to `cancelled` and restores stock instead of deleting the row along with all its order items. Only `pending` orders can be cancelled — an order already paid or shipped needs a refund or return process, not a column update.
 
-**Perubahan order dibatasi pada status.** Mengubah isi order berarti menghitung ulang selisih stock per item dan berisiko menghasilkan state yang tidak konsisten. `PUT /orders/<id>/status` hanya mengubah status; untuk mengubah isi, order dibatalkan lalu dibuat ulang.
+**Order edits are limited to status.** Changing an order's contents means recalculating the stock delta per item and risks producing inconsistent state. `PUT /orders/<id>/status` only changes the status; to change contents, cancel the order and create a new one.
 
-**Registrasi berada di bawah `/auth`.** `POST /auth/register` dikelompokkan bersama endpoint autentikasi lain agar konsisten, alih-alih berdiri sendiri sebagai `POST /users`.
+**Registration lives under `/auth`.** `POST /auth/register` is grouped with the other authentication endpoints for consistency rather than standing alone as `POST /users`. The `/users` resource is reserved for administration and profile updates.
 
-**Autentikasi menggunakan JWT.** Spesifikasi menyebut JWT sebagai opsional dan mengizinkan pengiriman `user_id` melalui request body. Pendekatan tersebut tidak diadopsi karena membuat siapa pun dapat mengaku sebagai user lain. JWT dipilih agar identitas pengguna berasal dari token yang tertandatangani, bukan dari input yang dapat dimanipulasi.
+**JWT for authentication.** The specification lists JWT as optional and allows passing `user_id` in the request body. That approach was not adopted because it lets anyone claim to be another user. JWT was chosen so identity comes from a signed token rather than manipulable input.
 
-**Error handling terpusat.** Alih-alih blok `try/except` yang berulang di setiap route, penanganan error database dan exception tak terduga dipusatkan di global error handler. Setiap kegagalan menghasilkan rollback session, log detail di sisi server, dan response JSON yang aman di sisi client.
+**Centralized error handling.** Instead of repeating `try/except` blocks in every route, database errors and unexpected exceptions are handled in a global error handler. Every failure rolls back the session, logs details server-side, and returns a safe JSON response to the client.
 
 ---
 
 ## Screenshots
 
-Bukti pengujian dan struktur database tersedia di folder `img/`:
+Test evidence and database structure are in the `img/` folder:
 
-- Request Postman untuk setiap HTTP method (GET, POST, PUT, DELETE)
-- Struktur tabel dan relasi di pgAdmin
-- Diagram ERD
-- Dashboard Locust pada 200 concurrent user
+- Postman requests for each HTTP method (GET, POST, PUT, DELETE)
+- Table structure and relationships in pgAdmin
+- ERD diagram
+- Locust dashboard at 200 concurrent users
 
 ---
 
